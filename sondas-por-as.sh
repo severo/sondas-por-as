@@ -1,24 +1,37 @@
 #!/bin/bash
 
 function nombre_asn {
-  # Descargar la información del número autónomo
-  [ -e /tmp/$1.txt  ] || curl -s https://rdap.lacnic.net/rdap/autnum/$1 > /tmp/$1.txt
+  # Descargar la información del número autónomo - TODO: refrescar periodicamente
+  [ -e /tmp/$1.json  ] || curl -s https://rdap.lacnic.net/rdap/autnum/$1 > /tmp/$1.json
+
   # En caso de error "429" (Query rate limit exceeded), avisar y salir
-  if [ $(jq .errorCode /tmp/$1.txt) = "429" ]
+  if [ $(jq .errorCode /tmp/$1.json) = "429" ]
   then
     nombre="Error -> Query rate limit exceeded"
-    mv /tmp/$1.txt /tmp/$1.txt.old
+    mv /tmp/$1.json /tmp/$1.json.old
   else
-    nombre=$(cat /tmp/$1.txt | jq --raw-output --from-file nombre_asn.jq)
+    nombre=$(cat /tmp/$1.json | jq --raw-output --from-file nombre_asn.jq)
+    numero_sondas=$(jq --raw-output --from-file numero_sondas.jq --argjson asn $1 /tmp/atlas_bo.json)
   fi
-  printf "AS %s - nombre: %s\n" "$1" "$nombre"
+
+  # Añadir en el archivo JSON de salida
+  jq --arg asn "$1" --arg nombre "$nombre" --argjson sondas $numero_sondas '. += [{asn: $asn, nombre: $nombre, sondas: $sondas}]' /tmp/sondas_asn.json > /tmp/sondas_asn.json.tmp
+  mv /tmp/sondas_asn.json.tmp /tmp/sondas_asn.json
 }
 
-# Lista de los ASN de Bolivia
-[ -e /tmp/asns.txt  ] || curl -s www.cc2asn.com/data/bo_asn > /tmp/asn.txt;
+# Lista de los ASN de Bolivia, y sacar el prefijo "AS" - TODO: refrescar periodicamente
+[ -e /tmp/asn.json  ] || curl -s www.cc2asn.com/data/bo_asn | sed s/AS// > /tmp/asn.json;
 
-# Sacar el prefijo "AS"
-sed -i s/AS// /tmp/asn.txt
+# Recuperar la lista de sondas en Bolivia - TODO: refrescar periodicamente
+[ -e /tmp/atlas_bo.json  ] || curl -s https://atlas.ripe.net:443/api/v2/probes/?country_code=BO > /tmp/atlas_bo.json;
 
-# Buscar el nombre de la entidad que reservó el ASN
-cat /tmp/asn.txt | while read line ; do nombre_asn $line ; done
+# Crear un JSON con los datos de cada ASN
+jq -n '[]' > /tmp/sondas_asn.json
+cat /tmp/asn.json | while read line ; do nombre_asn $line; done
+
+# Ordenar por número de sondas
+cat /tmp/sondas_asn.json | jq 'sort_by(.sondas) | reverse' > /tmp/sondas_asn.json.tmp
+mv /tmp/sondas_asn.json.tmp /tmp/sondas_asn.json
+
+# Mostrar
+jq --raw-output --from-file mostrar_sondas_asn.jq /tmp/sondas_asn.json
