@@ -34,4 +34,4 @@ cat /tmp/sondas_asn.json | jq 'sort_by(.sondas) | reverse' > /tmp/sondas_asn.jso
 mv /tmp/sondas_asn.json.tmp /tmp/sondas_asn.json
 
 # Mostrar
-jq --raw-output --from-file mostrar_sondas_asn.jq /tmp/sondas_asn.json
+#jq --raw-output --from-file mostrar_sondas_asn.jq /tmp/sondas_asn.json
