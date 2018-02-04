@@ -19,11 +19,11 @@ function nombre_asn {
   mv /tmp/sondas_asn.json.tmp /tmp/sondas_asn.json
 }
 
-# Lista de los ASN de Bolivia, y sacar el prefijo "AS" - TODO: refrescar periodicamente
-[ -e /tmp/asn.json  ] || curl -s www.cc2asn.com/data/bo_asn | sed s/AS// > /tmp/asn.json;
+# Lista de los ASN de Bolivia, y sacar el prefijo "AS" - siempre descargar
+curl -s www.cc2asn.com/data/bo_asn | sed s/AS// > /tmp/asn.json;
 
-# Recuperar la lista de sondas en Bolivia - TODO: refrescar periodicamente
-[ -e /tmp/atlas_bo.json  ] || curl -s https://atlas.ripe.net:443/api/v2/probes/?country_code=BO > /tmp/atlas_bo.json;
+# Recuperar la lista de sondas en Bolivia - siempre descargar
+curl -s https://atlas.ripe.net:443/api/v2/probes/?country_code=BO > /tmp/atlas_bo.json;
 
 # Crear un JSON con los datos de cada ASN
 jq -n '[]' > /tmp/sondas_asn.json
